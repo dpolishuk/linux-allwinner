@@ -17,4 +17,6 @@ config SUNXI_IGNORE_ATAG_MEM
 	bool "Use AllWinner's hack to assume memory size"
 	default n
 
+source "arch/arm/mach-sun4i/wifi/Kconfig"
+
 endif
