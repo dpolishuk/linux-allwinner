@@ -1,6 +1,6 @@
 #
 # Automatically generated make config: don't edit
-# Linux/arm 3.0.38 Kernel Configuration
+# Linux/arm 3.0.39 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_CHIP_ID=1123
@@ -1316,6 +1316,11 @@ CONFIG_PA_CONFIG=y
 # CONFIG_DRM is not set
 # CONFIG_ION is not set
 CONFIG_MALI=m
+CONFIG_MALI400=m
+# CONFIG_MALI400_DEBUG is not set
+# CONFIG_MALI400_GPU_UTILIZATION is not set
+CONFIG_UMP=m
+# CONFIG_UMP_DEBUG is not set
 # CONFIG_VGASTATE is not set
 # CONFIG_VIDEO_OUTPUT_CONTROL is not set
 CONFIG_FB=y
