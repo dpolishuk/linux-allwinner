@@ -109,7 +109,13 @@ static void sun4i_cpufreq_show(const char *pfx, struct sun4i_cpu_freq_t *cfg)
 */
 static inline unsigned int __get_vdd_value(unsigned int freq)
 {
-    struct cpufreq_dvfs *dvfs_inf = &dvfs_table[0];
+    static struct cpufreq_dvfs *dvfs = NULL;
+    struct cpufreq_dvfs *dvfs_inf;
+
+    if (unlikely(dvfs == NULL))
+        dvfs = sunxi_dvfs_table();
+
+    dvfs_inf = dvfs;
     while((dvfs_inf+1)->freq >= freq) dvfs_inf++;
 
     return dvfs_inf->volt;
@@ -182,13 +188,17 @@ static inline int __set_cpufreq_hw(struct sun4i_cpu_freq_t *freq)
 static int __set_cpufreq_target(struct sun4i_cpu_freq_t *old, struct sun4i_cpu_freq_t *new)
 {
     int ret = 0;
+    int div_table_len;
     unsigned int i = 0;
     unsigned int j = 0;
     struct sun4i_cpu_freq_t old_freq, new_freq;
+    static struct cpufreq_div_order *div_order_tbl = NULL;
 
-    if (!old || !new) {
+    if (unlikely(div_order_tbl == NULL))
+        div_order_tbl = sunxi_div_order_table(&div_table_len);
+
+    if (!old || !new)
         return -EINVAL;
-    }
 
     old_freq = *old;
     new_freq = *new;
@@ -201,20 +211,20 @@ static int __set_cpufreq_target(struct sun4i_cpu_freq_t *old, struct sun4i_cpu_f
          * let's change them in order */
 
         /* Figure out old one */
-        while (i < ARRAY_SIZE(sun4i_div_order_tbl)-1 &&
-              sun4i_div_order_tbl[i][1] < old_freq.pll) i++;
+        while (i < div_table_len-1 &&
+              div_order_tbl[i].pll < old_freq.pll) i++;
 
         /* Figure out new one */
         j = i; /* it's either the same or bigger */
-        while (j < ARRAY_SIZE(sun4i_div_order_tbl)-1 &&
-              sun4i_div_order_tbl[j][1] < new_freq.pll) j++;
+        while (j < div_table_len-1 &&
+              div_order_tbl[j].pll < new_freq.pll) j++;
 
-        for (; i < ARRAY_SIZE(sun4i_div_order_tbl)-1 && i < j; i++) {
-            old_freq.pll = sun4i_div_order_tbl[i][1];
-            old_freq.div.i = sun4i_div_order_tbl[i][0];
+        for (; i < div_table_len-1 && i < j; i++) {
+            old_freq.pll = div_order_tbl[i].pll;
+            old_freq.div.i = div_order_tbl[i].div;
             ret |= __set_cpufreq_hw(&old_freq);
 
-            old_freq.div.i = sun4i_div_order_tbl[i+1][0];
+            old_freq.div.i = div_order_tbl[i+1].div;
             ret |= __set_cpufreq_hw(&old_freq);
         }
     /* We're lowering our clock */
@@ -222,20 +232,20 @@ static int __set_cpufreq_target(struct sun4i_cpu_freq_t *old, struct sun4i_cpu_f
         /* We have a div table, the old and the new divs, let's change them in order */
 
         /* Figure out new one*/
-        while (i < ARRAY_SIZE(sun4i_div_order_tbl)-1 &&
-              sun4i_div_order_tbl[i][1] < new_freq.pll) i++;
+        while (i < div_table_len-1 &&
+              div_order_tbl[i].pll < new_freq.pll) i++;
 
         /* Figure out old one */
         j = i; /* it's either the same or bigger */
-        while (j < ARRAY_SIZE(sun4i_div_order_tbl)-1 &&
-              sun4i_div_order_tbl[j][1] < old_freq.pll) j++;
+        while (j < div_table_len-1 &&
+              div_order_tbl[j].pll < old_freq.pll) j++;
 
         for (; j > 0 && i < j; j--) {
-            old_freq.pll = sun4i_div_order_tbl[j-1][1];
-            old_freq.div.i = sun4i_div_order_tbl[j][0];
+            old_freq.pll = div_order_tbl[j-1].pll;
+            old_freq.div.i = div_order_tbl[j].div;
             ret |= __set_cpufreq_hw(&old_freq);
 
-            old_freq.div.i = sun4i_div_order_tbl[j-1][0];
+            old_freq.div.i = div_order_tbl[j-1].div;
             ret |= __set_cpufreq_hw(&old_freq);
         }
     }
@@ -406,6 +416,10 @@ static int sun4i_cpufreq_target(struct cpufreq_policy *policy, __u32 freq, __u32
     int                     ret;
     unsigned int            index;
     struct sun4i_cpu_freq_t freq_cfg;
+    static struct cpufreq_frequency_table *sun4i_freq_tbl = NULL;
+
+    if (unlikely(sun4i_freq_tbl == NULL))
+        sun4i_freq_tbl = sunxi_cpufreq_table();
 
 	/* avoid repeated calls which cause a needless amout of duplicated
 	 * logging output (and CPU time as the calculation process is
@@ -691,7 +705,8 @@ static __init int sun4i_cpufreq_initclks(void)
 */
 static int __init sun4i_cpufreq_initcall(void)
 {
-	int ret = 0;
+    int ret = 0;
+    struct cpufreq_frequency_table *sun4i_freq_tbl = sunxi_cpufreq_table();
 
     /* initialise some clock resource */
     ret = sun4i_cpufreq_initclks();
@@ -713,4 +728,3 @@ static int __init sun4i_cpufreq_initcall(void)
 	return ret;
 }
 late_initcall(sun4i_cpufreq_initcall);
-

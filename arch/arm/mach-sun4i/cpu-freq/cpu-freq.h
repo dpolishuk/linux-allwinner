@@ -52,7 +52,6 @@ struct sun4i_clk_div_t {
     __u32   reserved:16;
 };
 
-
 struct sun4i_cpu_freq_t {
     __u32                   pll;    /* core pll frequency value */
     union {
@@ -64,17 +63,23 @@ struct sun4i_cpu_freq_t {
 #define SUN4I_CLK_DIV(cpu_div, axi_div, ahb_div, apb_div)       \
                 ((cpu_div<<0)|(axi_div<<4)|(ahb_div<<8)|(apb_div<<12))
 
-extern struct cpufreq_frequency_table sun4i_freq_tbl[];
-extern unsigned int sun4i_freq_tbl_count;
-extern __u32 sun4i_div_order_tbl[5][2];
-
 #ifdef CONFIG_CPU_FREQ_DVFS
 struct cpufreq_dvfs {
     unsigned int    freq;   /* cpu frequency    */
     unsigned int    volt;   /* voltage for the frequency    */
 };
+#endif
 
-extern struct cpufreq_dvfs dvfs_table[];
+struct cpufreq_div_order {
+    __u32 div;
+    __u32 pll;
+};
+
+/* Table fetchers */
+struct cpufreq_frequency_table * sunxi_cpufreq_table(void);
+struct cpufreq_div_order * sunxi_div_order_table(int *length);
+#ifdef CONFIG_CPU_FREQ_DVFS
+struct cpufreq_dvfs * sunxi_dvfs_table(void);
 #endif
 
 #endif  /* #ifndef __SUN4I_CPU_FREQ_H__ */
